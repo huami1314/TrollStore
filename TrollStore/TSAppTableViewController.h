@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "TSAppInfo.h"
-#import <CoreServices.h>
+#import "../Shared/CoreServices.h"
 
 @interface TSAppTableViewController : UITableViewController <UISearchResultsUpdating, UIDocumentPickerDelegate, LSApplicationWorkspaceObserverProtocol>
 {

@@ -19,14 +19,21 @@ $(HELPER_NAME)_FILES += ../Exploits/fastPathSign/src/coretrust_bug.c ../Exploits
 $(HELPER_NAME)_CODESIGN_FLAGS = --entitlements entitlements.plist
 $(HELPER_NAME)_LDFLAGS = -L../ChOma/external/ios -lcrypto
 else
+ifeq ($(THEOS_PACKAGE_SCHEME),roothide)
+$(HELPER_NAME)_CODESIGN_FLAGS = -Sentitlements-roothide.plist
+else
 $(HELPER_NAME)_CODESIGN_FLAGS = -Sentitlements.plist
+endif
 endif
  
 $(HELPER_NAME)_CFLAGS = -fobjc-arc -I../Shared $(shell pkg-config --cflags libcrypto) -I../ChOma/src -I../Exploits/fastPathSign/src -I$(shell brew --prefix)/opt/libarchive/include
 
 $(HELPER_NAME)_INSTALL_PATH = /usr/local/bin
 $(HELPER_NAME)_LIBRARIES = archive
-$(HELPER_NAME)_FRAMEWORKS = CoreTelephony
+ifeq ($(THEOS_PACKAGE_SCHEME),roothide)
+$(HELPER_NAME)_LIBRARIES += roothide
+endif
+$(HELPER_NAME)_FRAMEWORKS = CoreTelephony CoreServices
 $(HELPER_NAME)_PRIVATE_FRAMEWORKS = SpringBoardServices BackBoardServices MobileContainerManager FrontBoardServices RunningBoardServices
 
 ifdef TROLLSTORE_LITE

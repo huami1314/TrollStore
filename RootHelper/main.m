@@ -24,7 +24,7 @@
 #import <SpringBoardServices/SpringBoardServices.h>
 #import <FrontBoardServices/FBSSystemService.h>
 #import <Security/Security.h>
-#import <libroot.h>
+#import <roothide.h>
 
 #ifdef EMBEDDED_ROOT_HELPER
 #define MAIN_NAME rootHelperMain
@@ -254,7 +254,7 @@ BOOL isLdidInstalled(void)
 
 NSString *getLdidPath(void)
 {
-	return JBROOT_PATH(@"/usr/bin/ldid");
+	return jbroot(@"/usr/bin/ldid");
 }
 
 #else
@@ -521,11 +521,11 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 			if (entitlementsXML) {
 				entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
 				[entitlementsXML writeToFile:entitlementsPath atomically:NO];
-				signArg = [@"-S" stringByAppendingString:entitlementsPath];
+				signArg = [@"-S" stringByAppendingString:rootfs(entitlementsPath)];
 			}
 			
 		}
-		int ldidRet = runLdid(@[signArg, filePath], nil, &errorOutput);
+		int ldidRet = runLdid(@[signArg, rootfs(filePath)], nil, &errorOutput);
 		if (entitlementsPath) {
 			[[NSFileManager defaultManager] removeItemAtPath:entitlementsPath error:nil];
 		}

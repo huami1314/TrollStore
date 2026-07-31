@@ -2,6 +2,8 @@ TOPTARGETS := all clean update
 
 $(TOPTARGETS): pre_build make_fastPathSign make_roothelper make_trollstore make_trollhelper_embedded make_trollhelper_package assemble_trollstore build_installer15 build_installer64e make_trollstore_lite
 
+trollstore_lite_roothide: make_trollstore_lite_roothide
+
 pre_build:
 	@rm -rf ./_build 2>/dev/null || true
 	@mkdir -p ./_build
@@ -90,4 +92,12 @@ make_trollstore_lite:
 	@$(MAKE) -C ./TrollStoreLite $(MAKECMDGOALS)
 endif
 
-.PHONY: $(TOPTARGETS) pre_build assemble_trollstore make_trollhelper_package make_trollhelper_embedded build_installer15 build_installer64e
+make_trollstore_lite_roothide:
+	@$(MAKE) -C ./RootHelper TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide clean
+	@$(MAKE) -C ./TrollStoreLiteRoothide THEOS_PACKAGE_SCHEME=roothide clean
+	@$(MAKE) -C ./RootHelper DEBUG=0 TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide
+	@rm -f ./TrollStoreLiteRoothide/Resources/trollstorehelper
+	@cp ./RootHelper/.theos/obj/trollstorehelper_lite ./TrollStoreLiteRoothide/Resources/trollstorehelper
+	@$(MAKE) -C ./TrollStoreLiteRoothide package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
+
+.PHONY: $(TOPTARGETS) trollstore_lite_roothide pre_build assemble_trollstore make_trollhelper_package make_trollhelper_embedded build_installer15 build_installer64e make_trollstore_lite_roothide

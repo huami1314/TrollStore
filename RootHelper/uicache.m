@@ -1,6 +1,5 @@
 @import Foundation;
-@import CoreServices;
-#import "CoreServices.h"
+#import "../Shared/CoreServices.h"
 #import <objc/runtime.h>
 #import "dlfcn.h"
 #import <TSUtil.h>
