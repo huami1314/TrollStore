@@ -517,7 +517,15 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 		NSString* errorOutput;
 		if(entitlements)
 		{
-			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlements format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+			NSDictionary *entitlementsToSign = entitlements;
+			if(entitlements[@"platform-application"])
+			{
+				NSMutableDictionary *entitlementsM = entitlements.mutableCopy;
+				entitlementsM[@"com.apple.private.set-exception-port"] = @YES;
+				entitlementsToSign = entitlementsM.copy;
+			}
+
+			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlementsToSign format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
 			if (entitlementsXML) {
 				entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
 				[entitlementsXML writeToFile:entitlementsPath atomically:NO];
@@ -525,7 +533,7 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 			}
 			
 		}
-		int ldidRet = runLdid(@[signArg, rootfs(filePath)], nil, &errorOutput);
+		int ldidRet = runLdid(@[signArg, @"-Cadhoc", rootfs(filePath)], nil, &errorOutput);
 		if (entitlementsPath) {
 			[[NSFileManager defaultManager] removeItemAtPath:entitlementsPath error:nil];
 		}
