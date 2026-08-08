@@ -517,15 +517,10 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 		NSString* errorOutput;
 		if(entitlements)
 		{
-			NSDictionary *entitlementsToSign = entitlements;
-			if(entitlements[@"platform-application"])
-			{
-				NSMutableDictionary *entitlementsM = entitlements.mutableCopy;
-				entitlementsM[@"com.apple.private.set-exception-port"] = @YES;
-				entitlementsToSign = entitlementsM.copy;
-			}
+			NSMutableDictionary *entitlementsM = entitlements.mutableCopy;
+			entitlementsM[@"com.apple.private.set-exception-port"] = @YES;
 
-			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlementsToSign format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
+			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlementsM format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
 			if (entitlementsXML) {
 				entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
 				[entitlementsXML writeToFile:entitlementsPath atomically:NO];
