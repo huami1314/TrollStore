@@ -519,6 +519,7 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 		{
 			NSMutableDictionary *entitlementsM = entitlements.mutableCopy;
 			entitlementsM[@"com.apple.private.set-exception-port"] = @YES;
+			entitlementsM[@"com.apple.security.get-movable-control-port"] = @YES;
 
 			NSData *entitlementsXML = [NSPropertyListSerialization dataWithPropertyList:entitlementsM format:NSPropertyListXMLFormat_v1_0 options:0 error:nil];
 			if (entitlementsXML) {
