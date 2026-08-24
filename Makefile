@@ -99,6 +99,7 @@ make_trollstore_lite_roothide: make_trollstore_lite_ldid
 	@$(MAKE) -C ./RootHelper TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide clean
 	@$(MAKE) -C ./TrollStoreLiteRoothide THEOS_PACKAGE_SCHEME=roothide clean
 	@$(MAKE) -C ./RootHelper DEBUG=0 TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide
+	@rm -f ./TrollStoreLite/Resources/trollstorehelper
 	@rm -f ./TrollStoreLiteRoothide/Resources/trollstorehelper
 	@cp ./RootHelper/.theos/obj/trollstorehelper_lite ./TrollStoreLiteRoothide/Resources/trollstorehelper
 	@$(MAKE) -C ./TrollStoreLiteRoothide package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide

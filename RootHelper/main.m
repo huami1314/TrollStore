@@ -592,7 +592,7 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements, NSString *teamID)
 			}
 			
 		}
-		NSMutableArray *signArgs = [@[signArg, @"-Cadhoc"] mutableCopy];
+		NSMutableArray *signArgs = [@[signArg] mutableCopy];
 		if(teamID.length > 0) [signArgs addObject:[@"-t" stringByAppendingString:teamID]];
 		[signArgs addObject:pathForLdid(filePath)];
 		int ldidRet = runLdid(signArgs, nil, &errorOutput);
