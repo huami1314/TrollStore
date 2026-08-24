@@ -1,5 +1,6 @@
 #import <stdio.h>
 #import "unarchive.h"
+#import "lite_trust_policy.h"
 @import Foundation;
 #import "uicache.h"
 #import <sys/stat.h>
@@ -564,6 +565,7 @@ static NSString *teamIDForMainExecutableAtPath(NSString *mainExecutablePath)
 
 	return @"TROLLTROLL";
 }
+
 #endif
 
 int signAdhoc(NSString *filePath, NSDictionary *entitlements, NSString *teamID)
@@ -632,6 +634,7 @@ int signApp(NSString* appPath)
 	NSString *appTeamID = nil;
 #ifdef TROLLSTORE_LITE
 	appTeamID = teamIDForMainExecutableAtPath(mainExecutablePath);
+	NSMutableArray<NSString *> *liteLaunchExecutables = [NSMutableArray new];
 #endif
 
 #ifndef TROLLSTORE_LITE
@@ -701,6 +704,10 @@ int signApp(NSString* appPath)
 
 			// We don't care about frameworks (yet)
 			if ([packageType isEqualToString:@"FMWK"]) continue;
+
+#ifdef TROLLSTORE_LITE
+			[liteLaunchExecutables addObject:bundleMainExecutablePath];
+#endif
 
 			NSMutableDictionary *entitlementsToUse = dumpEntitlementsFromBinaryAtPath(bundleMainExecutablePath).mutableCopy;
 			if (isSameFile(bundleMainExecutablePath, mainExecutablePath)) {
@@ -783,6 +790,25 @@ int signApp(NSString* appPath)
 	// XXX: This only works because we're using ldid at the moment and that recursively signs everything
 	int r = signAdhoc(appPath, nil, appTeamID);
 	if (r != 0) return r;
+
+#ifdef TROLLSTORE_LITE
+	NSArray<NSString *> *preservedTrustIdentities = TSLitePreservedTrustIdentitiesForApp(appPath, liteLaunchExecutables);
+	if(preservedTrustIdentities.count)
+	{
+		for(NSString *launchExecutable in liteLaunchExecutables)
+		{
+			NSMutableDictionary *entitlements = dumpEntitlementsFromBinaryAtPath(launchExecutable).mutableCopy;
+			if(!entitlements) entitlements = [NSMutableDictionary new];
+			entitlements[@"jb.pmap_cs.preserve_trust"] = preservedTrustIdentities;
+			r = signAdhoc(launchExecutable, entitlements, appTeamID);
+			if(r != 0) return r;
+		}
+
+		// Rebuild the outer bundle seals after changing nested launch executables.
+		r = signAdhoc(appPath, nil, appTeamID);
+		if(r != 0) return r;
+	}
+#endif
 
 #ifndef TROLLSTORE_LITE
 	// Apply CoreTrust bypass
