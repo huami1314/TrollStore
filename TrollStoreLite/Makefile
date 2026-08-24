@@ -7,6 +7,7 @@ include $(THEOS)/makefiles/common.mk
 APPLICATION_NAME = TrollStoreLite
 
 TrollStoreLite_FILES = $(wildcard ../TrollStore/*.m) $(wildcard ../Shared/*.m)
+TrollStoreLite_RESOURCE_FILES = Resources/ldid Resources/trollstorehelper
 TrollStoreLite_FRAMEWORKS = UIKit CoreGraphics CoreServices CoreTelephony
 TrollStoreLite_PRIVATE_FRAMEWORKS = Preferences MobileIcons MobileContainerManager
 TrollStoreLite_LIBRARIES = archive

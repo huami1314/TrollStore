@@ -7,3 +7,5 @@ xcuserdata
 Pwnify/pwnify
 InstallerVictim.ipa
 _build
+/Dependencies/ldid/
+/Dependencies/libplist/

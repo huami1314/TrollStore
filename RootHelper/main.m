@@ -18,6 +18,8 @@
 #import "FAT.h"
 #import "MachO.h"
 #import "FileStream.h"
+#import "CSBlob.h"
+#import "CodeDirectory.h"
 #import "Host.h"
 #endif
 
@@ -244,21 +246,7 @@ void setTSURLSchemeState(BOOL newState, NSString* customAppPath)
 	}
 }
 
-#ifdef TROLLSTORE_LITE
-
-BOOL isLdidInstalled(void)
-{
-	// Since TrollStore Lite depends on ldid, we assume it exists
-	return YES;
-}
-
-NSString *getLdidPath(void)
-{
-	return jbroot(@"/usr/bin/ldid");
-}
-
-#else
-
+#ifndef TROLLSTORE_LITE
 void installLdid(NSString* ldidToCopyPath, NSString* ldidVersion)
 {
 	if(![[NSFileManager defaultManager] fileExistsAtPath:ldidToCopyPath]) return;
@@ -279,19 +267,21 @@ void installLdid(NSString* ldidToCopyPath, NSString* ldidVersion)
 	chmod(ldidPath.fileSystemRepresentation, 0755);
 	chmod(ldidVersionPath.fileSystemRepresentation, 0644);
 }
-
-BOOL isLdidInstalled(void)
-{
-	NSString* ldidPath = [trollStoreAppPath() stringByAppendingPathComponent:@"ldid"];
-	return [[NSFileManager defaultManager] fileExistsAtPath:ldidPath];
-}
+#endif
 
 NSString *getLdidPath(void)
 {
+#ifdef TROLLSTORE_LITE
+	return [[getExecutablePath() stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"ldid"];
+#else
 	return [trollStoreAppPath() stringByAppendingPathComponent:@"ldid"];
+#endif
 }
 
-#endif
+BOOL isLdidInstalled(void)
+{
+	return [[NSFileManager defaultManager] fileExistsAtPath:getLdidPath()];
+}
 
 int runLdid(NSArray* args, NSString** output, NSString** errorOutput)
 {
@@ -364,6 +354,15 @@ int runLdid(NSArray* args, NSString** output, NSString** errorOutput)
 	}
 
 	return WEXITSTATUS(status);
+}
+
+static NSString *pathForLdid(NSString *path)
+{
+#ifdef TROLLSTORE_LITE
+	return path;
+#else
+	return rootfs(path);
+#endif
 }
 
 BOOL certificateHasDataForExtensionOID(SecCertificateRef certificate, CFStringRef oidString)
@@ -503,7 +502,71 @@ int signApp(NSString* appPath)
 	return -1;
 }
 #else
-int signAdhoc(NSString *filePath, NSDictionary *entitlements)
+#ifdef TROLLSTORE_LITE
+static NSString *codeDirectoryTeamIDForBinaryAtPath(NSString *binaryPath)
+{
+	FAT *fat = fat_init_from_path(binaryPath.fileSystemRepresentation);
+	if(!fat) return nil;
+
+	NSString *teamID = nil;
+	for(uint32_t sliceIndex = 0; sliceIndex < fat->slicesCount; sliceIndex++)
+	{
+		CS_SuperBlob *superblob = macho_read_code_signature(fat->slices[sliceIndex]);
+		if(!superblob) continue;
+
+		CS_DecodedSuperBlob *decodedSuperblob = csd_superblob_decode(superblob);
+		free(superblob);
+		if(!decodedSuperblob) continue;
+
+		CS_DecodedBlob *bestCodeDirectory = NULL;
+		unsigned bestRank = 0;
+		for(CS_DecodedBlob *blob = decodedSuperblob->firstBlob; blob; blob = blob->next)
+		{
+			if(blob->type != CSSLOT_CODEDIRECTORY &&
+			   (blob->type < CSSLOT_ALTERNATE_CODEDIRECTORIES || blob->type >= CSSLOT_ALTERNATE_CODEDIRECTORY_LIMIT)) continue;
+
+			unsigned rank = csd_code_directory_calculate_rank(blob);
+			if(rank > bestRank)
+			{
+				bestCodeDirectory = blob;
+				bestRank = rank;
+			}
+		}
+
+		char *rawTeamID = bestCodeDirectory ? csd_code_directory_copy_team_id(bestCodeDirectory, NULL) : NULL;
+		NSString *sliceTeamID = rawTeamID && rawTeamID[0] ? [NSString stringWithUTF8String:rawTeamID] : nil;
+		free(rawTeamID);
+		csd_superblob_free(decodedSuperblob);
+
+		if(sliceTeamID.length == 0) continue;
+		if(!teamID)
+		{
+			teamID = sliceTeamID;
+		}
+		else if(![teamID isEqualToString:sliceTeamID])
+		{
+			teamID = nil;
+			break;
+		}
+	}
+
+	fat_free(fat);
+	return teamID;
+}
+
+static NSString *teamIDForMainExecutableAtPath(NSString *mainExecutablePath)
+{
+	NSString *teamID = codeDirectoryTeamIDForBinaryAtPath(mainExecutablePath);
+	if(teamID.length > 0) return teamID;
+
+	id entitlementTeamID = dumpEntitlementsFromBinaryAtPath(mainExecutablePath)[@"com.apple.developer.team-identifier"];
+	if([entitlementTeamID isKindOfClass:NSString.class] && [entitlementTeamID length] > 0) return entitlementTeamID;
+
+	return @"TROLLTROLL";
+}
+#endif
+
+int signAdhoc(NSString *filePath, NSDictionary *entitlements, NSString *teamID)
 {
 	//if (@available(iOS 16, *)) {
 	//	return codesign_sign_adhoc(filePath.fileSystemRepresentation, true, entitlements);
@@ -525,11 +588,14 @@ int signAdhoc(NSString *filePath, NSDictionary *entitlements)
 			if (entitlementsXML) {
 				entitlementsPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[NSUUID UUID].UUIDString] stringByAppendingPathExtension:@"plist"];
 				[entitlementsXML writeToFile:entitlementsPath atomically:NO];
-				signArg = [@"-S" stringByAppendingString:rootfs(entitlementsPath)];
+				signArg = [@"-S" stringByAppendingString:pathForLdid(entitlementsPath)];
 			}
 			
 		}
-		int ldidRet = runLdid(@[signArg, @"-Cadhoc", rootfs(filePath)], nil, &errorOutput);
+		NSMutableArray *signArgs = [@[signArg, @"-Cadhoc"] mutableCopy];
+		if(teamID.length > 0) [signArgs addObject:[@"-t" stringByAppendingString:teamID]];
+		[signArgs addObject:pathForLdid(filePath)];
+		int ldidRet = runLdid(signArgs, nil, &errorOutput);
 		if (entitlementsPath) {
 			[[NSFileManager defaultManager] removeItemAtPath:entitlementsPath error:nil];
 		}
@@ -562,6 +628,11 @@ int signApp(NSString* appPath)
 	if(!mainExecutablePath) return 176;
 
 	if(![[NSFileManager defaultManager] fileExistsAtPath:mainExecutablePath]) return 174;
+
+	NSString *appTeamID = nil;
+#ifdef TROLLSTORE_LITE
+	appTeamID = teamIDForMainExecutableAtPath(mainExecutablePath);
+#endif
 
 #ifndef TROLLSTORE_LITE
 	// Check if the bundle has had a supported exploit pre-applied
@@ -702,7 +773,7 @@ int signApp(NSString* appPath)
 			entitlementsToUse[@"jb.pmap_cs.custom_trust"] = @"PMAP_CS_APP_STORE";
 #endif
 
-			int r = signAdhoc(bundleMainExecutablePath, entitlementsToUse);
+			int r = signAdhoc(bundleMainExecutablePath, entitlementsToUse, nil);
 			if (r != 0) return r;
 		}
 	}
@@ -710,7 +781,7 @@ int signApp(NSString* appPath)
 	// All entitlement related issues should be fixed at this point, so all we need to do is sign the entire bundle
 	// And then apply the CoreTrust bypass to all executables
 	// XXX: This only works because we're using ldid at the moment and that recursively signs everything
-	int r = signAdhoc(appPath, nil);
+	int r = signAdhoc(appPath, nil, appTeamID);
 	if (r != 0) return r;
 
 #ifndef TROLLSTORE_LITE

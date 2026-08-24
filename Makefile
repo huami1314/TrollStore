@@ -19,6 +19,9 @@ make_trollstore:
 
 ifneq ($(MAKECMDGOALS),clean)
 
+make_trollstore_lite_ldid: pre_build
+	@bash ./BuildTools/build-ldid.sh
+
 make_trollhelper_package:
 	@$(MAKE) clean -C ./TrollHelper
 	@cp ./RootHelper/.theos/obj/trollstorehelper ./TrollHelper/Resources/trollstorehelper
@@ -75,7 +78,7 @@ build_installer64e:
 	popd
 	@rm -rf ./_build/tmp64e
 
-make_trollstore_lite:
+make_trollstore_lite: make_trollstore_lite_ldid
 	@$(MAKE) -C ./RootHelper DEBUG=0 TROLLSTORE_LITE=1
 	@rm -rf ./TrollStoreLite/Resources/trollstorehelper
 	@cp ./RootHelper/.theos/obj/trollstorehelper_lite ./TrollStoreLite/Resources/trollstorehelper
@@ -92,7 +95,7 @@ make_trollstore_lite:
 	@$(MAKE) -C ./TrollStoreLite $(MAKECMDGOALS)
 endif
 
-make_trollstore_lite_roothide:
+make_trollstore_lite_roothide: make_trollstore_lite_ldid
 	@$(MAKE) -C ./RootHelper TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide clean
 	@$(MAKE) -C ./TrollStoreLiteRoothide THEOS_PACKAGE_SCHEME=roothide clean
 	@$(MAKE) -C ./RootHelper DEBUG=0 TROLLSTORE_LITE=1 THEOS_PACKAGE_SCHEME=roothide
@@ -100,4 +103,4 @@ make_trollstore_lite_roothide:
 	@cp ./RootHelper/.theos/obj/trollstorehelper_lite ./TrollStoreLiteRoothide/Resources/trollstorehelper
 	@$(MAKE) -C ./TrollStoreLiteRoothide package FINALPACKAGE=1 THEOS_PACKAGE_SCHEME=roothide
 
-.PHONY: $(TOPTARGETS) trollstore_lite_roothide pre_build assemble_trollstore make_trollhelper_package make_trollhelper_embedded build_installer15 build_installer64e make_trollstore_lite_roothide
+.PHONY: $(TOPTARGETS) trollstore_lite_roothide pre_build assemble_trollstore make_trollhelper_package make_trollhelper_embedded build_installer15 build_installer64e make_trollstore_lite_ldid make_trollstore_lite_roothide

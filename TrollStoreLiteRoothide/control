@@ -1,9 +1,8 @@
 Package: com.opa334.trollstorelite
 Name: TrollStore Lite (RootHide)
-Version: 2.1.1
+Version: 2.1.1-1
 Architecture: iphoneos-arm
 Description: TrollStore for RootHide jailbroken iOS
-Depends: ldid
 Maintainer: opa334
 Author: opa334
 Section: Applications
