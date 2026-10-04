@@ -1,0 +1,26 @@
+diff --git a/ldid.cpp b/ldid.cpp
+index 7813c22..0544e7e 100644
+--- a/ldid.cpp
++++ b/ldid.cpp
+@@ -1645,7 +1645,9 @@ static void Allocate(const void *idata, size_t isize, std::streambuf &output, co
+                 case LC_SEGMENT: {
+                     auto segment_command(reinterpret_cast<struct segment_command *>(&copy[0]));
+ 
+-                    if ((segment_command->initprot & 04) != 0) {
++                    // CodeDirectory describes the main __TEXT segment, not an
++                    // envelope around every executable segment in the file.
++                    if (strncmp(segment_command->segname, "__TEXT", 16) == 0) {
+                         auto begin(mach_header.Swap(segment_command->fileoff));
+                         auto end(begin + mach_header.Swap(segment_command->filesize));
+                         if (left > begin)
+@@ -1664,7 +1666,9 @@ static void Allocate(const void *idata, size_t isize, std::streambuf &output, co
+                 case LC_SEGMENT_64: {
+                     auto segment_command(reinterpret_cast<struct segment_command_64 *>(&copy[0]));
+ 
+-                    if ((segment_command->initprot & 04) != 0) {
++                    // CodeDirectory describes the main __TEXT segment, not an
++                    // envelope around every executable segment in the file.
++                    if (strncmp(segment_command->segname, "__TEXT", 16) == 0) {
+                         auto begin(mach_header.Swap(segment_command->fileoff));
+                         auto end(begin + mach_header.Swap(segment_command->filesize));
+                         if (left > begin)

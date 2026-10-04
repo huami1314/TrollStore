@@ -12,13 +12,19 @@ libcrypto_path="$root_directory/ChOma/external/ios/libcrypto.a"
 entitlements_path="$root_directory/BuildTools/ldid.entitlements.plist"
 ldid_repository="https://github.com/ProcursusTeam/ldid.git"
 ldid_revision="af86971ae72ec3ed3d0a699107c4e882324c941b"
-ldid_version="v2.1.5-procursus7-23-gaf86971"
+ldid_version="v2.1.5-procursus7-23-gaf86971-tslite-execseg1"
+ldid_patch_path="$root_directory/BuildTools/ldid-exec-segment.patch"
 libplist_repository="https://github.com/libimobiledevice/libplist.git"
 libplist_revision="cf5897a71ea412ea2aeb1e2f6b5ea74d4fabfd8c"
 libplist_version="2.7.0"
 
 if [[ ! -f "$entitlements_path" ]]; then
 	echo "error: missing ldid entitlements" >&2
+	exit 1
+fi
+
+if [[ ! -f "$ldid_patch_path" ]]; then
+	echo "error: missing ldid exec segment patch" >&2
 	exit 1
 fi
 
@@ -42,6 +48,7 @@ checkout_source()
 
 checkout_source "$ldid_repository" "$ldid_revision" "$ldid_directory"
 checkout_source "$libplist_repository" "$libplist_revision" "$libplist_directory"
+git -C "$ldid_directory" apply "$ldid_patch_path"
 
 sdk_path="$(xcrun --sdk iphoneos --show-sdk-path)"
 common_c_flags=(
